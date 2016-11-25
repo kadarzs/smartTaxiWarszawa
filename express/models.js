@@ -4,7 +4,8 @@ var Schema = mongoose.Schema;
 
 var driverSchema = new Schema({
 	"name" : String,
-	"status" : String
+	"status" : String,
+	"path" : Array
 });
 
 var passengerSchema = new Schema({

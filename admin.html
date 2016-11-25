@@ -114,6 +114,13 @@ function initMap() {
 		"passengerf" : new google.maps.MarkerImage('female32.png',iconpos.size,iconpos.point,iconpos.center)
 	}
 	
+	$.ajax({
+		url: "http://mosinet.dyndns.org:28017/drivers/58376309212dd17d2482f5f9",
+		type: "delete",
+		contentType: "application/json",
+		data: '{"lat" : 47.123, "lng" : 19.123}'
+	});
+	
 	// Load data from server
 	$.getJSON("http://mosinet.dyndns.org:27017/taxi/drivers", function( data ) {
 		var items = [];
