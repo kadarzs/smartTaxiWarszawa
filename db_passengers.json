@@ -1,0 +1,2 @@
+{"_id":{"$oid":"58348e18f792d94b00aed845"},"name":"Adam","request":true,"color":"#0033DD","male":true,"act":{"lat":52.21329,"lng":21.04671},"aim":{"lat":52.21812,"lng":21.09581},"address":"Wał Miedzeszyński 724"}
+{"_id":{"$oid":"58348e7ef792d94b00aed846"},"name":"Ewa","request":false,"color":"#DD3300","male":false,"act":{"lat":52.22443,"lng":21.04328},"aim":{"lat":52.23516,"lng":21.00826},"address":"Świętokrzyska 31/33"}
