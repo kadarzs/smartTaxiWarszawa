@@ -174,7 +174,7 @@ function initMap() {
 		];
 
 	//Set up maps
-	directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.4, strokeWeight: 2, strokeColor: "#000000"}, suppressMarkers: true});
+	
 	map = new google.maps.Map(document.getElementById('map'), {
 		zoom: 13,
 		center: Taxis[0].path[0],
@@ -240,30 +240,18 @@ function drawPassenger(passenger) {
 }
 function drawTaxi(taxi, me) {
 	var directionsService = new google.maps.DirectionsService();
-	var weight;
 	var opacity = 0.4;
 	var affix = "";
 	if(me) {
-		weight = 4;
 		opacity = 1.0;
 		affix = " (me)";
-	} else weight = 2;
+	}
+	
+	directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.7, strokeWeight: 3, strokeColor: taxi.color}, suppressMarkers: true});
 	
 	var lineSymbol = {
 		path: google.maps.SymbolPath.FORWARD_OPEN_ARROW
 	};
-	
-	var road = new google.maps.Polyline({
-		path: taxi.path,
-		icons: [{
-			icon: lineSymbol,
-			offset: '100%'
-		}],
-		strokeColor: taxi.color,
-		strokeWeight: weight,
-		strokeOpacity: opacity,
-		map: map
-	});
 	
 	var message = "<h3>"+taxi.name+affix+"</h3>taxi driver<br/>status: <b>"+taxi.status+"</b>";
 	

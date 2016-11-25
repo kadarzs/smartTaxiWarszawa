@@ -125,7 +125,7 @@ function initMap() {
 		];
 
 	//Set up maps
-	directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.4, strokeWeight: 2, strokeColor: "#000000"}, suppressMarkers: true});
+	
 	map = new google.maps.Map(document.getElementById('map'), {
 		zoom: 13,
 		center: Passengers[0].act,
@@ -237,6 +237,7 @@ function drawPassenger(passenger) {
 }
 function drawTaxi(taxi) {
 	var directionsService = new google.maps.DirectionsService();
+	directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.7, strokeWeight: 3, strokeColor: taxi.color}, suppressMarkers: true});
 	
 	var lineSymbol = {
 		path: google.maps.SymbolPath.FORWARD_OPEN_ARROW
@@ -251,17 +252,6 @@ function drawTaxi(taxi) {
 		map: map,
 		center: taxi.path[0],
 		radius: 300
-	});
-	
-	var road = new google.maps.Polyline({
-		path: taxi.path,
-		icons: [{
-			icon: lineSymbol,
-			offset: '100%'
-		}],
-		strokeColor: taxi.color,
-		strokeWeight: 4,
-		map: map
 	});
 	
 	var waypoints = [];
