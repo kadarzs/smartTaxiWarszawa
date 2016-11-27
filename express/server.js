@@ -206,9 +206,9 @@ router.route("/passengers/:id")
 				passenger.active = timeout;
 				
 				//The position of the passenger can change.
-				if(req.body.actlat !== undefined && req.body.actlng !== undefined) {
-					var lat = req.body.actlat;
-					var lng = req.body.actlng;
+				if(req.body.lat !== undefined && req.body.lng !== undefined) {
+					var lat = req.body.lat;
+					var lng = req.body.lng;
 					var newpoint = {lat, lng};
 					passenger.act = newpoint;
 				}
