@@ -14,14 +14,33 @@ router.get("/",function(req,res){
 });
 
 router.route("/drivers")
-	.get(function(req, res){
+	.get(function(req, res) {
 		var response = {};
-		mongoOp.Drivers.find({},function(err, driver) {
+		mongoOp.Drivers.find({},function(err, drivers) {
 			if(!err) {
-				response = {"error" : false, "data" : driver};
+				response = {"error" : false, "data" : drivers};
 			}
 			console.log("Listed all drivers");
 			res.json(response);
+		});
+	})
+	.put(function(req, res) {
+		var response = {};
+		var driversnearby = [];
+		
+		mongoOp.Drivers.find({},function(err, drivers) {
+			if(!err) {
+				if(req.body.lat !== undefined && req.body.lng !== undefined) {
+					drivers.forEach(function(driver, i) {
+						if(Math.abs(driver.path[0].lat-req.body.lat) < 0.014 && Math.abs(driver.path[0].lng-req.body.lng) < 0.024) {
+							driversnearby.push(driver);
+						}
+					});
+					response = {"error" : false, "data" : driversnearby};
+					console.log("Listed all drivers nearby");
+					res.json(response);
+				}
+			}
 		});
 	});
 
@@ -30,10 +49,18 @@ router.route("/drivers/:id")
 		var response = {};
 		mongoOp.Drivers.findById(req.params.id, function(err, driver) {
 			if(!err) {
-				response = {"error" : false, "data" : driver};
+				//The driver is active.
+				var timeout = new Date().getTime() + 5*60*1000; // in the next 5 minutes
+				driver.active = timeout;
+				
+				driver.save(function(err, updateddriver) {
+					if(!err) {
+						console.log("Driver: " + req.params.id + " show up.");
+						response = {"error" : false, "data" : updateddriver};
+						res.json(response);
+					}
+				});
 			}
-			console.log("Driver: " + req.params.id + " listed.");
-			res.json(response);
 		});
 	})
 	.put(function(req, res) {
@@ -41,10 +68,15 @@ router.route("/drivers/:id")
 		mongoOp.Drivers.findById(req.params.id, function(err, driver) {
 			if(!err) {
 				var isAlready = false;
+				//The driver is active.
+				var timeout = new Date().getTime() + 5*60*1000; // in the next 5 minutes
+				driver.active = timeout;
 				
+				//The status of the taxi can change.
 				if(req.body.status !== undefined) {
 					driver.status = req.body.status;
 				}
+				//There could be new destination point added.
 				if(req.body.lat !== undefined && req.body.lng !== undefined) {
 					var lat = req.body.lat;
 					var lng = req.body.lng;
@@ -69,6 +101,32 @@ router.route("/drivers/:id")
 						})
 					}
 				}
+				//The taxi can move.
+				if(req.body.movelat !== undefined && req.body.movelng !== undefined) {
+					var lat = req.body.movelat;
+					var lng = req.body.movelng;
+					var newpoint = {lat, lng};
+					var path = driver.toObject().path;
+					var newpath = [];
+					
+					path.forEach(function(point, i, object) {
+						if(Math.abs(point.lat-req.body.movelat) < 0.00014 && Math.abs(point.lng-req.body.movelng) < 0.00024) {
+							isAlready = true;
+						} else {
+							newpath.push(point);
+						}
+					});
+					
+					if(!isAlready)	newpath.unshift(newpoint);
+					
+					driver.path = newpath;
+					driver.save(function(err, updateddriver) {
+						if(!err) {
+							console.log("Driver: " + req.params.id + " has a new position.");
+							res.send(updateddriver);
+						}
+					});
+				}
 			}
 		});
 	})
@@ -77,7 +135,11 @@ router.route("/drivers/:id")
 		mongoOp.Drivers.findById(req.params.id, function(err, driver) {
 			if(!err) {
 				var wasAlready = false;
+				//The driver is active.
+				var timeout = new Date().getTime() + 5*60*1000; // in the next 5 minutes
+				driver.active = timeout;
 				
+				//The destination point can be removed.
 				if(req.body.lat !== undefined && req.body.lng !== undefined) {
 					var newpath = driver.toObject().path;
 					
@@ -105,26 +167,73 @@ router.route("/drivers/:id")
 					
 
 router.route("/passengers")
-        .get(function(req, res){
-                var response = {};
-                mongoOp.Passengers.find({},function(err, data) {
-                        if(!err) {
-                                response = {"error" : false, "data" : data};
-                        }
-                        res.json(response);
-                });
-        });
+	.get(function(req, res){
+		var response = {};
+		mongoOp.Passengers.find({},function(err, passenger) {
+			if(!err) {
+				response = {"error" : false, "data" : passenger};
+			}
+			console.log("Listed all passengers");
+				res.json(response);
+		});
+	});
 
 router.route("/passengers/:id")
-        .get(function(req, res) {
-                var response = {};
-                mongoOp.Passengers.findById(req.params.id, function(err, data) {
-                        if(!err) {
-                        	response = {"error" : false, "data" : data}; 
-                        }
-                        res.json(response);
-                });
-        });
+	.get(function(req, res) {
+		var response = {};
+		mongoOp.Passengers.findById(req.params.id, function(err, passenger) {
+			if(!err) {
+				//The passenger is active.
+				var timeout = new Date().getTime() + 5*60*1000; // in the next 5 minutes
+				passenger.active = timeout;
+				
+				passenger.save(function(err, updatedpassenger) {
+					if(!err) {
+						console.log("Passenger: " + req.params.id + " show up.");
+						response = {"error" : false, "data" : updatedpassenger};
+						res.json(response);
+					}
+				});
+			}
+		});
+	})
+	.put(function(req, res) {
+		var response = {};
+		mongoOp.Passengers.findById(req.params.id, function(err, passenger) {
+			if(!err) {
+				//The passenger is active.
+				var timeout = new Date().getTime() + 5*60*1000; // in the next 5 minutes
+				passenger.active = timeout;
+				
+				//The position of the passenger can change.
+				if(req.body.actlat !== undefined && req.body.actlng !== undefined) {
+					var lat = req.body.actlat;
+					var lng = req.body.actlng;
+					var newpoint = {lat, lng};
+					passenger.act = newpoint;
+				}
+				//The destination of the passenger can change.
+				if(req.body.aimlat !== undefined && req.body.aimlng !== undefined) {
+					var lat = req.body.aimlat;
+					var lng = req.body.aimlng;
+					var newpoint = {lat, lng};
+					passenger.aim = newpoint;
+				}
+				//The destination address of the passenger can change.
+				if(req.body.address !== undefined) {
+					passenger.address = req.body.address;
+				}
+				
+				passenger.save(function(err, updatedpassenger) {
+					if(!err) {
+						console.log("Passenger: " + req.params.id + " has a new position/destination.");
+						res.send(updatedpassenger);
+					}
+				});
+			}
+		});
+	});
+			
 
 
 app.use('/',router);
