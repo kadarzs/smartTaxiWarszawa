@@ -91,7 +91,21 @@ $(document).ready(function() {
 var x = document.getElementById("demo");
 var directionsDisplay;
 var map;
+var icon;
+var iconpos;
+var icons;
+
+//Settings
+var timeout = 7 * 1000; // 7 second
+
+var drivers = [];
+var passengers = [];
+
+//individual storages
+var passengerIcons = [];
+var radarCircle;
 var direction;
+var directionWindow;
 
 function getLocation() {
 	if (navigator.geolocation) {
@@ -113,14 +127,14 @@ function initMap() {
 		"passengerm" : new google.maps.MarkerImage('male32.png',iconpos.size,iconpos.point,iconpos.center),
 		"passengerf" : new google.maps.MarkerImage('female32.png',iconpos.size,iconpos.point,iconpos.center)
 	}
-	
+
 	$.ajax({
 		url: "http://mosinet.dyndns.org:28017/drivers/58376309212dd17d2482f5f9",
 		type: "delete",
 		contentType: "application/json",
 		data: '{"lat" : 47.123, "lng" : 19.123}'
 	});
-	
+
 	// Load data from server
 	$.getJSON("http://mosinet.dyndns.org:27017/taxi/drivers", function( data ) {
 		var items = [];
@@ -181,7 +195,7 @@ function initMap() {
 		];
 
 	//Set up maps
-	
+
 	map = new google.maps.Map(document.getElementById('map'), {
 		zoom: 13,
 		center: Taxis[0].path[0],
@@ -189,16 +203,16 @@ function initMap() {
 		zoomControl: true,
 		draggableCursor: 'crosshair'
 	});
-	
+
 	$.each(Taxis, function(i,taxi) {
 		if(i == 0) drawTaxi(taxi, true);
 		else drawTaxi(taxi, false);
 	});
-	
+
 	$.each(Passengers, function(i,passenger) {
 		drawPassenger(passenger);
 	});
-	
+
 	$("#mainbutton").bind('click', function() {
 		sendMessage(Passengers[0]);
 	});
@@ -207,14 +221,14 @@ function drawPassenger(passenger) {
 	var lineSymbol = {
 		path: google.maps.SymbolPath.FORWARD_OPEN_ARROW
 	};
-	
+
 	var icon = new google.maps.Marker({
 		position: passenger.act,
 		map: map,
 		icon: passenger.icon,
 		title: passenger.name
 	});
-	
+
 	var message = "<h3>"+passenger.name+"</h3>passenger";
 	var infowindow;
 	if(passenger.request) {
@@ -231,7 +245,7 @@ function drawPassenger(passenger) {
 	icon.addListener('click', function() {
 		infowindow.open(map, icon);
 	});
-	
+
 	direction = new google.maps.Polyline({
 		path: [passenger.act, passenger.aim],
 		icons: [{
@@ -242,7 +256,7 @@ function drawPassenger(passenger) {
 		strokeWeight: 2
 	});
 	direction.setMap(map);
-	
+
 	return direction;
 }
 function drawTaxi(taxi, me) {
@@ -253,15 +267,15 @@ function drawTaxi(taxi, me) {
 		opacity = 1.0;
 		affix = " (me)";
 	}
-	
+
 	directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.7, strokeWeight: 3, strokeColor: taxi.color}, suppressMarkers: true});
-	
+
 	var lineSymbol = {
 		path: google.maps.SymbolPath.FORWARD_OPEN_ARROW
 	};
-	
+
 	var message = "<h3>"+taxi.name+affix+"</h3>taxi driver<br/>status: <b>"+taxi.status+"</b>";
-	
+
 	if(me) {
 		var waypoints = [];
 		$.each(taxi.path, function(i,v) {
@@ -318,4 +332,4 @@ function showPosition(position) {
 <script async defer
 src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBsBK_d9wlZFFAp6HW9SwatMWRp4zy3vHM&callback=initMap">
 </script>
-</html> 
+</html>
