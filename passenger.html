@@ -165,6 +165,8 @@ function drawPassenger(passenger) {
 		direction.setPath([passenger.act, passenger.aim]);
 		aim.setPosition(passenger.aim);
 		aim.setTitle(passenger.address);
+		radarCircle.setCenter(passenger.act);
+		passengerIcon.setPosition(passenger.act);
 	} else {
 		passengerIcon = new google.maps.Marker({
 			position: passenger.act,
@@ -172,6 +174,8 @@ function drawPassenger(passenger) {
 			icon: (passenger.male) ? icons.passengerm : icons.passengerf,
 			title: passenger.name
 		});
+
+		map.panTo(passenger.act);
 
 		radarCircle = new google.maps.Circle({
 			strokeColor: '#DDDDFF',
@@ -198,6 +202,10 @@ function drawPassenger(passenger) {
 		directionWindow = new google.maps.InfoWindow({
 			content: message
 		});
+		directionWindow.setPosition(passenger.aim);
+		directionWindow.close();
+		directionWindow.setMap(null);
+		directionWindow.open(map, aim);
 
 		aim = new google.maps.Marker({
 			position: passenger.aim,
@@ -209,35 +217,30 @@ function drawPassenger(passenger) {
 
 	geocoder.geocode({'location': passenger.aim}, function(results, status) {
 		if(status === 'OK' && results[1]) {
-			passenger.address = results[0].address_components[1].long_name;
-			if(results[0].address_components[0].long_name) passenger.address += " " + results[0].address_components[0].long_name;
-			message = "<b>›› " + passenger.address + "</b>";
-			directionWindow.setContent(message);
+			if((passenger.address != results[0].address_components[1].long_name) && (passenger.address != results[0].address_components[1].long_name + " " + results[0].address_components[0].long_name)) {
+				passenger.address = results[0].address_components[1].long_name;
+				if(results[0].address_components[0].long_name) passenger.address += " " + results[0].address_components[0].long_name;
+				message = "<b>›› " + passenger.address + "</b>";
+				directionWindow.setContent(message);
 
-			var gorequest = '{"aimlat": ' + passenger.aim.lat + ', "aimlng": ' + passenger.aim.lng + ', "address": "' + passenger.address + '"}';
-			//Go there.
-			$.ajax({
-				url: "http://mosinet.dyndns.org:28017/passengers/58348e18f792d94b00aed845",
-				type: "put",
-				contentType: "application/json",
-				data: gorequest
-			}).done(function() {
-				movePassenger(passenger);
-			});
+				var gorequest = '{"aimlat": ' + passenger.aim.lat + ', "aimlng": ' + passenger.aim.lng + ', "address": "' + passenger.address + '"}';
+				//Go there.
+				$.ajax({
+					url: "http://mosinet.dyndns.org:28017/passengers/58348e18f792d94b00aed845",
+					type: "put",
+					contentType: "application/json",
+					data: gorequest
+				});
+
+				directionWindow.setPosition(passenger.aim);
+				directionWindow.close();
+				directionWindow.setMap(null);
+				directionWindow.open(map, aim);
+			}
 		}
 	});
 
-	directionWindow.setPosition(passenger.aim);
-	directionWindow.close();
-	directionWindow.setMap(null);
-	directionWindow.open(map, aim);
-
 	return direction;
-}
-function movePassenger(passenger) {
-	if(direction) direction.setPath([passenger.act, passenger.aim]);
-	if(radarCircle) radarCircle.setCenter(passenger.act);
-	if(passengerIcon) passengerIcon.setPosition(passenger.act);
 }
 function drawTaxi(driver) {
 	//Default icon set
@@ -257,7 +260,7 @@ function drawTaxi(driver) {
 	if(myTaxi) {
 		myTaxi.setCenter(driver.path[0]);
 	} else {
-			myTaxi = new google.maps.Circle({
+		myTaxi = new google.maps.Circle({
 			strokeColor: '#993333',
 			strokeOpacity: 1.0,
 			strokeWeight: 2,
@@ -267,6 +270,7 @@ function drawTaxi(driver) {
 			center: driver.path[0],
 			radius: 300
 		});
+		myTaxi.setVisible(true);
 	}
 
 	var waypoints = [];
@@ -289,13 +293,10 @@ function drawTaxi(driver) {
 		}
 	});
 
-	var infoWindow = new google.maps.InfoWindow({
-		content: "<h3>"+driver.name+"</h3>"
-	});
-
 	if(taxi) {
 		taxi.setPosition(driver.path[0]);
 		taxi.setTitle(driver.name);
+		taxi.setVisible(true);
 	} else {
 		taxi = new google.maps.Marker({
 			position: driver.path[0],
@@ -303,10 +304,20 @@ function drawTaxi(driver) {
 			icon: icons.taxi,
 			title: driver.name
 		});
+
+		var infoWindow = new google.maps.InfoWindow({
+			content: "<h3>"+driver.name+"</h3>taxi driver<br/>status: <b>"+driver.status+"</b>"
+		});
+
 		taxi.addListener('click', function() {
-			infowindow.open(map, taxi);
+			infoWindow.open(map, taxi);
 		});
 	}
+}
+function noTaxi() {
+	if(taxi) taxi.setVisible(false);
+	if(myTaxi) myTaxi.setVisible(false);
+	if(directionsDisplay) directionsDisplay.setMap(null);
 }
 function sendMessage(passenger) {
 	var radius = 200;
@@ -330,7 +341,7 @@ function savePosition(position) {
 		data: pointrequest
 	}).done(function(ans) {
 		passenger = ans.data;
-		movePassenger(passenger);
+		drawPassenger(passenger);
 	});
 
 	// Drivers nearby
@@ -342,10 +353,12 @@ function savePosition(position) {
 	}).done(function(ans) {
 		drivers = ans.data;
 
-		if(drivers) {
+		if(drivers.length > 0) {
 			drivers.forEach(function(driver, i) {
 				drawTaxi(driver);
 			});
+		} else {
+			noTaxi();
 		}
 	});
 }
