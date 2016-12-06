@@ -110,21 +110,19 @@ router.route("/drivers/:id")
 					var path = driver.toObject().path;
 					var newpath = [];
 
-					path.forEach(function(point, i, object) {
-						if(Math.abs(point.lat-req.body.movelat) < 0.00014 && Math.abs(point.lng-req.body.movelng) < 0.00024) {
-							isAlready = true;
-						} else {
-							newpath.push(point);
+					path.forEach(function(point, i) {
+						if(i > 0) {
+							if(Math.abs(point.lat-lat) > 0.00014 || Math.abs(point.lng-lng) > 0.00024) {
+								newpath.push(point);
+							}
 						}
 					});
-
-					if(!isAlready)
-						newpath.unshift(newpoint);
+					newpath.unshift(newpoint);
 
 					driver.path = newpath;
 					driver.save(function(err, updateddriver) {
 						if(!err) {
-							console.log("Driver: " + req.params.id + " has a new position.");
+							if((path[0].lat != lat) || (path[0].lng != lng)) console.log("Driver: " + req.params.id + " has a new position.");
 							response = {"error" : false, "data" : updateddriver};
 							res.json(response);
 						}
