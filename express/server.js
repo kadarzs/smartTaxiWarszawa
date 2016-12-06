@@ -96,7 +96,8 @@ router.route("/drivers/:id")
 						driver.save(function(err, updateddriver) {
 							if(!err) {
 								console.log("Driver: " + req.params.id + " has a new destination added.");
-								res.send(updateddriver);
+								response = {"error" : false, "data" : updateddriver};
+								res.json(response);
 							}
 						})
 					}
@@ -117,13 +118,15 @@ router.route("/drivers/:id")
 						}
 					});
 
-					if(!isAlready)	newpath.unshift(newpoint);
+					if(!isAlready)
+						newpath.unshift(newpoint);
 
 					driver.path = newpath;
 					driver.save(function(err, updateddriver) {
 						if(!err) {
 							console.log("Driver: " + req.params.id + " has a new position.");
-							res.send(updateddriver);
+							response = {"error" : false, "data" : updateddriver};
+							res.json(response);
 						}
 					});
 				}
@@ -164,7 +167,6 @@ router.route("/drivers/:id")
 			}
 		});
 	});
-
 
 router.route("/passengers")
 	.get(function(req, res){
@@ -240,8 +242,6 @@ router.route("/passengers/:id")
 			}
 		});
 	});
-
-
 
 app.use('/',router);
 
