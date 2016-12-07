@@ -237,9 +237,11 @@ function updatePosition(position) {
 	}).done(function(ans) {
 		drivers = ans.data;
 
-		$.each(drivers, function(i, driver) {
-			if(driver._id != me) drawTaxi(driver);
-		});
+		if(drivers.length > 0) {
+			$.each(drivers, function(i, driver) {
+				if(driver._id != me) drawTaxi(driver);
+			});
+		}
 	});
 }
 </script>
