@@ -149,7 +149,6 @@ function initMap() {
 		contentType: "application/json",
 	}).done(function(ans) {
 		driver = ans.data;
-		drivers[0] = driver;
 
 		drawTaxi(driver, true);
 	});
@@ -160,8 +159,10 @@ function drawPassenger(passenger) {
 	};
 
 	if(passengerIcons[passenger._id]) {
-		aims[passenger._id].setPosition(passenger.aim);
-		aims[passenger._id].setTitle(passenger.address);
+		if(aims[passenger._id]) {
+			aims[passenger._id].setPosition(passenger.aim);
+			aims[passenger._id].setTitle(passenger.address);
+		}
 		passengerIcons[passenger._id].setPosition(passenger.act);
 		directions[passenger._id].setPath([passenger.act, passenger.aim]);
 	} else {
@@ -196,7 +197,7 @@ function drawPassenger(passenger) {
 			passengerWindows[passenger._id].open(map, passengerIcons[passenger._id]);
 		});
 	}
-	if(passenger.request) {
+	if((passenger.request) && Math.abs(passenger.act.lat - driver.path[0].lat) < 0.0014 && Math.abs(passenger.act.lng - driver.path[0].lng) < 0.0024) {
 		message += "<br/><button>Take me!</button>";
 		passengerWindows[passenger._id].setContent(message);
 		passengerWindows[passenger._id].open(map, passengerIcons[passenger._id]);
