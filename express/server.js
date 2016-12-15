@@ -1,6 +1,12 @@
+var fs = require('fs');
+var https = require('https');
 var cors = require('cors');
 var express = require("express");
 var app = express();
+var options = {
+	key: fs.readFileSync('../../server.key'),
+	cert: fs.readFileSync('../../server.crt')
+}
 app.use(cors());
 var bodyParser = require("body-parser");
 var mongoOp = require("./models");
@@ -77,30 +83,29 @@ router.route("/drivers/:id")
 					driver.status = req.body.status;
 				}
 				//There could be new destination point added.
-				if(req.body.lat !== undefined && req.body.lng !== undefined) {
-					var lat = req.body.lat;
-					var lng = req.body.lng;
+				if(req.body.lat !== undefined && req.body.lng !== undefined && req.body.aimlat !== undefined && req.body.aimlng !== undefined) {
+					var lat = parseFloat(req.body.lat.toFixed(6));
+					var lng = parseFloat(req.body.lng.toFixed(6));
 					var newpoint = {lat, lng};
 					var newpath = driver.toObject().path;
 
-					newpath.forEach(function(point, i, object) {
-						if(point.lat == req.body.lat && point.lng == req.body.lng) {
-							isAlready = true;
+					newpath.push(newpoint);
+
+					lat = parseFloat(req.body.aimlat.toFixed(6));
+					lng = parseFloat(req.body.aimlng.toFixed(6));
+					newpoint = {lat, lng};
+
+					newpath.push(newpoint);
+
+					driver.path = newpath;
+
+					driver.save(function(err, updateddriver) {
+						if(!err) {
+							console.log("Driver: " + req.params.id + " has a new destination added.");
+							response = {"error" : false, "data" : updateddriver};
+							res.json(response);
 						}
 					});
-
-					if(!isAlready) {
-						newpath.push(newpoint);
-						driver.path = newpath;
-
-						driver.save(function(err, updateddriver) {
-							if(!err) {
-								console.log("Driver: " + req.params.id + " has a new destination added.");
-								response = {"error" : false, "data" : updateddriver};
-								res.json(response);
-							}
-						})
-					}
 				}
 				//The taxi can move.
 				if(req.body.movelat !== undefined && req.body.movelng !== undefined) {
@@ -243,5 +248,6 @@ router.route("/passengers/:id")
 
 app.use('/',router);
 
-app.listen(28017);
-console.log("Listening to PORT 28017");
+https.createServer(options, app).listen(28017, function() {
+	console.log("Listening to PORT 28017");
+});

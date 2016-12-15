@@ -6,7 +6,6 @@
 	<link href="style.css" rel="stylesheet">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 	<meta charset="utf-8">
-	<base href="http://localhost/taxi/">
 	<title>Smart Taxi Warszawa</title>
 </head>
 <body>
@@ -37,7 +36,8 @@ var timeout = 7 * 1000, //7 second
 var myface, //me
 	drivers = [], //all drivers nearby
 	taxis = [], //all taxi icons on the map
-	driverWindows = []; //all driver windows
+	driverWindows = [], //all driver windows
+	previousPaths = []; //all drivers previous paths
 
 var passengers = [], //all passengers
 	faces = [], //all face icons on the map
@@ -48,6 +48,16 @@ var radarCircle,
 	myTaxi,
 	aim;
 
+function closeInfoWindows() {
+	passengers.forEach(function(passenger) {
+		if(passengerWindows[passenger._id])
+			passengerWindows[passenger._id].close();
+	});
+	drivers.forEach(function(driver) {
+		if(driverWindows[driver._id])
+			driverWindows[driver._id].close();
+	});
+}
 function getLocation() {
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition(updatePosition);
@@ -80,7 +90,7 @@ function initMap() {
 
 	//Where am I?
 	$.ajax({
-		url: "http://mosinet.dyndns.org:28017/passengers/" + me,
+		url: "//mosinet.dyndns.org:28017/passengers/" + me,
 		type: "get",
 		contentType: "application/json",
 	}).done(function(ans) {
@@ -176,6 +186,7 @@ function drawPassenger(passenger) {
 		passengerWindows[passenger._id].setPosition(passenger.aim);
 		passengerWindows[passenger._id].close();
 		passengerWindows[passenger._id].setMap(null);
+		closeInfoWindows();
 		passengerWindows[passenger._id].open(map, aim);
 	}
 
@@ -190,7 +201,7 @@ function drawPassenger(passenger) {
 				var gorequest = '{"aimlat": ' + passenger.aim.lat + ', "aimlng": ' + passenger.aim.lng + ', "address": "' + passenger.address + '"}';
 				//Go there.
 				$.ajax({
-					url: "http://mosinet.dyndns.org:28017/passengers/" + me,
+					url: "//mosinet.dyndns.org:28017/passengers/" + me,
 					type: "put",
 					contentType: "application/json",
 					data: gorequest
@@ -199,16 +210,13 @@ function drawPassenger(passenger) {
 				passengerWindows[passenger._id].setPosition(passenger.aim);
 				passengerWindows[passenger._id].close();
 				passengerWindows[passenger._id].setMap(null);
+				closeInfoWindows();
 				passengerWindows[passenger._id].open(map, aim);
 			}
 		}
 	});
 }
 function drawTaxi(driver) {
-	var directionsService = new google.maps.DirectionsService();
-	if(!directionsDisplay)
-		directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.7, strokeWeight: 3, strokeColor: driver.color}, suppressMarkers: true, preserveViewport: true});
-
 	if(myTaxi) {
 		myTaxi.setCenter(driver.path[0]);
 	} else {
@@ -224,26 +232,32 @@ function drawTaxi(driver) {
 		});
 		myTaxi.setVisible(true);
 	}
+	if(JSON.stringify(driver.path) !== previousPaths[driver._id]) {
+		var directionsService = new google.maps.DirectionsService();
+		if(!directionsDisplay)
+			directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.7, strokeWeight: 3, strokeColor: driver.color}, suppressMarkers: true, preserveViewport: true});
 
-	var waypoints = [];
-	$.each(driver.path, function(i,v) {
-		if((i > 0) && (i <= driver.path.length)) {
-			waypoints.push({location: driver.path[i]});
-		}
-	});
-	var request = {
-		origin: driver.path[0],
-		optimizeWaypoints: true,
-		waypoints: waypoints,
-		destination: driver.base,
-		travelMode: "DRIVING"
-	};
-	directionsService.route(request, function(result, status) {
-		if(status == "OK") {
-			directionsDisplay.setMap(map);
-			directionsDisplay.setDirections(result);
-		}
-	});
+		var waypoints = [];
+		$.each(driver.path, function(i,v) {
+			if((i > 0) && (i <= driver.path.length)) {
+				waypoints.push({location: driver.path[i]});
+			}
+		});
+		var request = {
+			origin: driver.path[0],
+			optimizeWaypoints: true,
+			waypoints: waypoints,
+			destination: driver.base,
+			travelMode: "DRIVING"
+		};
+		directionsService.route(request, function(result, status) {
+			if(status == "OK") {
+				directionsDisplay.setMap(map);
+				directionsDisplay.setDirections(result);
+			}
+		});
+		previousPaths[driver._id] = JSON.stringify(driver.path);
+	}
 
 	if(taxis[driver._id]) {
 		taxis[driver._id].setPosition(driver.path[0]);
@@ -263,6 +277,7 @@ function drawTaxi(driver) {
 		});
 
 		taxis[driver._id].addListener('click', function() {
+			closeInfoWindows();
 			driverWindows[driver._id].open(map, taxis[driver._id]);
 		});
 	}
@@ -284,7 +299,7 @@ function updatePosition(position) {
 
 	//I am here.
 	$.ajax({
-		url: "http://mosinet.dyndns.org:28017/passengers/" + me,
+		url: "//mosinet.dyndns.org:28017/passengers/" + me,
 		type: "put",
 		contentType: "application/json",
 		data: pointrequest
@@ -295,7 +310,7 @@ function updatePosition(position) {
 
 	// Drivers nearby
 	$.ajax({
-		url: "http://mosinet.dyndns.org:28017/drivers/",
+		url: "//mosinet.dyndns.org:28017/drivers/",
 		type: "put",
 		contentType: "application/json",
 		data: pointrequest

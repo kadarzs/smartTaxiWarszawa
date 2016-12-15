@@ -6,7 +6,6 @@
 	<link href="style.css" rel="stylesheet">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 	<meta charset="utf-8">
-	<base href="http://localhost/taxi/">
 	<title>Smart Taxi Warszawa</title>
 </head>
 <body>
@@ -47,13 +46,25 @@ var timeout = 7 * 1000, //7 second
 var mytaxi, //me
 	drivers = [], //all drivers
 	taxis = [], //all taxi icons on the map
-	driverWindows = []; //all driver windows
+	driverWindows = [], //all driver windows
+	previousPaths = []; //all drivers previous paths
 
 var passengers = [], //all passengers
 	faces = [], //all face icons on the map
 	directions = [], //all direction arrows
 	passengerWindows = []; //all passenger windows
+	buttonReady = []; //button functionality defined
 
+function closeInfoWindows() {
+	passengers.forEach(function(passenger) {
+		if((passengerWindows[passenger._id]) && (!passenger.request))
+			passengerWindows[passenger._id].close();
+	});
+	drivers.forEach(function(driver) {
+		if(driverWindows[driver._id])
+			driverWindows[driver._id].close();
+	});
+}
 function getLocation() {
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition(updatePosition);
@@ -85,7 +96,7 @@ function initMap() {
 
 	//Where am I?
 	$.ajax({
-		url: "http://mosinet.dyndns.org:28017/drivers/" + me,
+		url: "//mosinet.dyndns.org:28017/drivers/" + me,
 		type: "get",
 		contentType: "application/json",
 	}).done(function(ans) {
@@ -130,13 +141,43 @@ function drawPassenger(passenger) {
 			content: message
 		});
 		faces[passenger._id].addListener('click', function() {
+			closeInfoWindows();
 			passengerWindows[passenger._id].open(map, faces[passenger._id]);
 		});
 	}
 	if((mytaxi) && (passenger.request) && Math.abs(passenger.act.lat - mytaxi.path[0].lat) < 0.014 && Math.abs(passenger.act.lng - mytaxi.path[0].lng) < 0.024) {
-		message += "<br/><button>Take me!</button>";
-		passengerWindows[passenger._id].setContent(message);
-		passengerWindows[passenger._id].open(map, faces[passenger._id]);
+		var addButton = [
+			'<br/><button id="' + (passenger._id) + '">Take me!</button>',
+			'<br/><button>Thanks!</button>'
+		];
+		if(buttonReady[passenger._id] == 2) {
+			passengerWindows[passenger._id].setContent(message+addButton[1]);
+		} else {
+			passengerWindows[passenger._id].setContent(message+addButton[0]);
+			closeInfoWindows();
+			passengerWindows[passenger._id].open(map, faces[passenger._id]);
+			google.maps.event.addListener(passengerWindows[passenger._id], 'domready', function() {
+				if(buttonReady[passenger._id] == undefined) {
+					$('#' + (passenger._id)).on('click', function() {
+						var pointrequest = '{"lat" : ' + passenger.act.lat + ', "lng" : ' + passenger.act.lng + ', "aimlat" : ' + passenger.aim.lat + ', "aimlng" : ' + passenger.aim.lng + '}';
+						//New destination.
+						$.ajax({
+							url: "//mosinet.dyndns.org:28017/drivers/" + me,
+							type: "put",
+							contentType: "application/json",
+							data: pointrequest
+						}).done(function(ans) {
+							driver = ans.data;
+							drawTaxi(driver);
+						});
+						alert("You have a new passenger!");
+						passengerWindows[passenger._id].setContent(message+addButton[1]);
+						buttonReady[passenger._id] = 2;
+					});
+					buttonReady[passenger._id] = 1;
+				}
+			});
+		}
 	}
 }
 function drawTaxi(driver) {
@@ -147,8 +188,6 @@ function drawTaxi(driver) {
 		opacity = 1.0;
 		affix = " (me)";
 	}
-	if(!directionsDisplay)
-		directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.7, strokeWeight: 3, strokeColor: driver.color}, suppressMarkers: true, preserveViewport: true});
 
 	var message = "<h3>"+driver.name+affix+"</h3>taxi driver<br/>status: <b>"+driver.status+"</b>";
 
@@ -159,19 +198,25 @@ function drawTaxi(driver) {
 				waypoints.push({location: driver.path[i]});
 			}
 		});
-		var request = {
-			origin: driver.path[0],
-			optimizeWaypoints: true,
-			waypoints: waypoints,
-			destination: driver.base,
-			travelMode: "DRIVING"
-		};
-		directionsService.route(request, function(result, status) {
-			if(status == "OK") {
-				directionsDisplay.setMap(map);
-				directionsDisplay.setDirections(result);
-			}
-		});
+		if(JSON.stringify(driver.path) !== previousPaths[driver._id]) {
+			if(!directionsDisplay)
+				directionsDisplay = new google.maps.DirectionsRenderer({polylineOptions: {strokeOpacity: 0.7, strokeWeight: 3, strokeColor: driver.color}, suppressMarkers: true, preserveViewport: true});
+
+			var request = {
+				origin: driver.path[0],
+				optimizeWaypoints: true,
+				waypoints: waypoints,
+				destination: driver.base,
+				travelMode: "DRIVING"
+			};
+			directionsService.route(request, function(result, status) {
+				if(status == "OK") {
+					directionsDisplay.setMap(map);
+					directionsDisplay.setDirections(result);
+				}
+			});
+			previousPaths[driver._id] = JSON.stringify(driver.path);
+		}
 	}
 
 	if(taxis[driver._id]) {
@@ -193,6 +238,7 @@ function drawTaxi(driver) {
 		});
 
 		taxis[driver._id].addListener('click', function() {
+			closeInfoWindows();
 			driverWindows[driver._id].open(map, taxis[driver._id]);
 		});
 
@@ -205,7 +251,7 @@ function updatePosition(position) {
 
 	//I am here.
 	$.ajax({
-		url: "http://mosinet.dyndns.org:28017/drivers/" + me,
+		url: "//mosinet.dyndns.org:28017/drivers/" + me,
 		type: "put",
 		contentType: "application/json",
 		data: pointrequest
@@ -216,7 +262,7 @@ function updatePosition(position) {
 
 	// Show all passengers
 	$.ajax({
-		url: "http://mosinet.dyndns.org:28017/passengers/",
+		url: "//mosinet.dyndns.org:28017/passengers/",
 		type: "get",
 		contentType: "application/json",
 	}).done(function(ans) {
@@ -231,7 +277,7 @@ function updatePosition(position) {
 
 	// Show all taxis
 	$.ajax({
-		url: "http://mosinet.dyndns.org:28017/drivers/",
+		url: "//mosinet.dyndns.org:28017/drivers/",
 		type: "get",
 		contentType: "application/json",
 	}).done(function(ans) {
