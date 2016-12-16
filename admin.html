@@ -14,14 +14,8 @@
 		<div id="map"></div>
 	</div>
 	<panel>
-		<strong>My orders:</strong>
+		<strong>My passengers today:</strong>
 		<ul id="list">
-			<li><b>Adam</b> ›› Wał Miedzeszyński 724</li>
-			<li><b>Vladimir</b> ›› aleja Niepodległości 2</li>
-		</ul>
-		<strong>My passengers:</strong>
-		<ul id="list">
-			<li><b>Edyta</b> ›› Saska 5</li>
 		</ul>
 	</panel>
 </body>
@@ -53,11 +47,11 @@ var passengers = [], //all passengers
 	faces = [], //all face icons on the map
 	directions = [], //all direction arrows
 	passengerWindows = []; //all passenger windows
-	buttonReady = []; //button functionality defined
+	picked = []; //passengers, who were picked up
 
 function closeInfoWindows() {
 	passengers.forEach(function(passenger) {
-		if((passengerWindows[passenger._id]) && (!passenger.request))
+		if((passengerWindows[passenger._id]) && (passenger.status == 0))
 			passengerWindows[passenger._id].close();
 	});
 	drivers.forEach(function(driver) {
@@ -104,18 +98,53 @@ function initMap() {
 		drawTaxi(mytaxi);
 	});
 }
+function takeMe(passId) {
+	passengers.forEach(function(passenger, i) {
+		if(passenger._id == passId) {
+			var message = "<h3>" + passenger.name + "</h3>passenger<br/><b>›› " + passenger.address + "</b><br/><u>on the road</u>";
+			var pointrequest = '{"lat" : ' + passenger.act.lat + ', "lng" : ' + passenger.act.lng + ', "aimlat" : ' + passenger.aim.lat + ', "aimlng" : ' + passenger.aim.lng + ', "passengerId" : "' + (passenger._id) + '"}';
+			//New destination.
+			$.ajax({
+				url: "//mosinet.dyndns.org:28017/drivers/" + me,
+				type: "put",
+				contentType: "application/json",
+				data: pointrequest
+			}).done(function(ans) {
+				driver = ans.data;
+				drawTaxi(driver);
+				$('#list').append('<li><b>' + passenger.name + '</b> ›› ' + passenger.address + '</li>');
+			});
+			//Passenger status change.
+			$.ajax({
+				url: "//mosinet.dyndns.org:28017/passengers/" + passenger._id,
+				type: "put",
+				contentType: "application/json",
+				data: '{"status" : 2, "driver" : "' + (me) +'"}'
+			});
+			alert("You have a new passenger!");
+		}
+	});
+}
 function drawPassenger(passenger) {
 	var lineSymbol = {
 		path: google.maps.SymbolPath.FORWARD_OPEN_ARROW
 	};
 
+	var opacity = 0.2;
+	if(picked[passenger._id] !== true) {
+		opacity = 1.0;
+	}
+
 	if(faces[passenger._id]) {
 		faces[passenger._id].setPosition(passenger.act);
+		faces[passenger._id].setOptions({'opacity': opacity});
 		directions[passenger._id].setPath([passenger.act, passenger.aim]);
+		directions[passenger._id].setOptions({'strokeOpacity': opacity});
 	} else {
 		faces[passenger._id] = new google.maps.Marker({
 			position: passenger.act,
 			map: map,
+			opacity: opacity,
 			icon: (passenger.male) ? icons.male : icons.female,
 			title: passenger.name
 		});
@@ -128,7 +157,8 @@ function drawPassenger(passenger) {
 				offset: '100%'
 			}],
 			strokeColor: passenger.color,
-			strokeWeight: 2
+			strokeWeight: 2,
+			strokeOpacity: opacity
 		});
 	}
 
@@ -145,38 +175,32 @@ function drawPassenger(passenger) {
 			passengerWindows[passenger._id].open(map, faces[passenger._id]);
 		});
 	}
-	if((mytaxi) && (passenger.request) && Math.abs(passenger.act.lat - mytaxi.path[0].lat) < 0.014 && Math.abs(passenger.act.lng - mytaxi.path[0].lng) < 0.024) {
+	if((mytaxi) && (passenger.status != 0) && Math.abs(passenger.act.lat - mytaxi.path[0].lat) < 0.014 && Math.abs(passenger.act.lng - mytaxi.path[0].lng) < 0.024) {
+		if(Math.abs(passenger.act.lat - mytaxi.path[0].lat) < 0.0014 && Math.abs(passenger.act.lng - mytaxi.path[0].lng) < 0.0024) {
+			picked[passenger._id] = true;
+		}
+
 		var addButton = [
-			'<br/><button id="' + (passenger._id) + '">Take me!</button>',
-			'<br/><button>Thanks!</button>'
+			'<br/><button onclick="takeMe(\'' + (passenger._id) + '\')">Take me!</button>',
+			'<br/><u>on the road</u>',
+			'<br/><u>arrived</u>'
 		];
-		if(buttonReady[passenger._id] == 2) {
+		var onTheRoad = false;
+		drivers.forEach(function(driver) {
+			if(driver._id == me) {
+				if(driver.passengers.indexOf(passenger._id) >= 0) {
+					onTheRoad = true;
+				}
+			}
+		});
+		if(passenger.status == 3) {
+			passengerWindows[passenger._id].setContent(message+addButton[2]);
+		} else if(onTheRoad) {
 			passengerWindows[passenger._id].setContent(message+addButton[1]);
 		} else {
 			passengerWindows[passenger._id].setContent(message+addButton[0]);
 			closeInfoWindows();
 			passengerWindows[passenger._id].open(map, faces[passenger._id]);
-			google.maps.event.addListener(passengerWindows[passenger._id], 'domready', function() {
-				if(buttonReady[passenger._id] == undefined) {
-					$('#' + (passenger._id)).on('click', function() {
-						var pointrequest = '{"lat" : ' + passenger.act.lat + ', "lng" : ' + passenger.act.lng + ', "aimlat" : ' + passenger.aim.lat + ', "aimlng" : ' + passenger.aim.lng + '}';
-						//New destination.
-						$.ajax({
-							url: "//mosinet.dyndns.org:28017/drivers/" + me,
-							type: "put",
-							contentType: "application/json",
-							data: pointrequest
-						}).done(function(ans) {
-							driver = ans.data;
-							drawTaxi(driver);
-						});
-						alert("You have a new passenger!");
-						passengerWindows[passenger._id].setContent(message+addButton[1]);
-						buttonReady[passenger._id] = 2;
-					});
-					buttonReady[passenger._id] = 1;
-				}
-			});
 		}
 	}
 }
@@ -249,6 +273,21 @@ function drawTaxi(driver) {
 function updatePosition(position) {
 	var pointrequest = '{"movelat" : ' + position.coords.latitude + ', "movelng" : ' + position.coords.longitude + '}';
 
+	// Show all taxis
+	$.ajax({
+		url: "//mosinet.dyndns.org:28017/drivers/",
+		type: "get",
+		contentType: "application/json",
+	}).done(function(ans) {
+		drivers = ans.data;
+
+		if(drivers.length > 0) {
+			$.each(drivers, function(i, driver) {
+				if(driver._id != me) drawTaxi(driver);
+			});
+		}
+	});
+
 	//I am here.
 	$.ajax({
 		url: "//mosinet.dyndns.org:28017/drivers/" + me,
@@ -271,21 +310,6 @@ function updatePosition(position) {
 		if(passengers.length > 0) {
 			passengers.forEach(function(passenger) {
 				drawPassenger(passenger);
-			});
-		}
-	});
-
-	// Show all taxis
-	$.ajax({
-		url: "//mosinet.dyndns.org:28017/drivers/",
-		type: "get",
-		contentType: "application/json",
-	}).done(function(ans) {
-		drivers = ans.data;
-
-		if(drivers.length > 0) {
-			$.each(drivers, function(i, driver) {
-				if(driver._id != me) drawTaxi(driver);
 			});
 		}
 	});

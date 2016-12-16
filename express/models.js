@@ -7,18 +7,20 @@ var driverSchema = new Schema({
 	"active" : Number,
 	"status" : String,
 	"color" : String,
-	"path" : Object
+	"path" : Object,
+	"passengers" : Object
 });
 
 var passengerSchema = new Schema({
 	"name" : String,
 	"active" : Number,
-	"request" : Boolean,
+	"status" : Number,
 	"color" : String,
 	"male" : Boolean,
 	"act" : Object,
 	"aim" : Object,
-	"address" : String
+	"address" : String,
+	"driver" : String
 });
 
 var Drivers = mongoose.model('drivers', driverSchema);

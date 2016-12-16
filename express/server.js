@@ -88,6 +88,7 @@ router.route("/drivers/:id")
 					var lng = parseFloat(req.body.lng.toFixed(6));
 					var newpoint = {lat, lng};
 					var newpath = driver.toObject().path;
+					var newpassengers = driver.toObject().passengers;
 
 					newpath.push(newpoint);
 
@@ -96,8 +97,10 @@ router.route("/drivers/:id")
 					newpoint = {lat, lng};
 
 					newpath.push(newpoint);
-
 					driver.path = newpath;
+
+					newpassengers.push(req.body.passengerId);
+					driver.passengers = newpassengers;
 
 					driver.save(function(err, updateddriver) {
 						if(!err) {
@@ -117,7 +120,7 @@ router.route("/drivers/:id")
 
 					path.forEach(function(point, i) {
 						if(i > 0) {
-							if(Math.abs(point.lat-lat) > 0.00014 || Math.abs(point.lng-lng) > 0.00024) {
+							if(Math.abs(point.lat-lat) > 0.0014 || Math.abs(point.lng-lng) > 0.0024) {
 								newpath.push(point);
 							}
 						}
@@ -144,6 +147,8 @@ router.route("/drivers/:id")
 				//The driver is active.
 				var timeout = new Date().getTime() + 5*60*1000; // in the next 5 minutes
 				driver.active = timeout;
+				var passengers = driver.toObject().passengers;
+				var newpassengers = [];
 
 				//The destination point can be removed.
 				if(req.body.lat !== undefined && req.body.lng !== undefined) {
@@ -158,15 +163,24 @@ router.route("/drivers/:id")
 
 					if(wasAlready) {
 						driver.path = newpath;
-
-						driver.save(function(err, updateddriver) {
-							if(!err) {
-								console.log("Driver: " + req.params.id + " has one destination removed.");
-								res.send(updateddriver);
-							}
-						})
 					}
 				}
+				//The passenger can be removed.
+				if(req.body.passenger !== undefined) {
+					passengers.forEach(function(passenger, i) {
+						if(passenger != req.body.passenger) {
+							newpassengers.push(passenger);
+						}
+					});
+					driver.passengers = newpassengers;
+				}
+
+				driver.save(function(err, updateddriver) {
+					if(!err) {
+						console.log("Driver: " + req.params.id + " has one destination removed.");
+						res.send(updateddriver);
+					}
+				});
 			}
 		});
 	});
@@ -190,6 +204,9 @@ router.route("/passengers/:id")
 			if(!err) {
 				//The passenger is active.
 				var timeout = new Date().getTime() + 5*60*1000; // in the next 5 minutes
+				if(timeout - passenger.active > 60*60*1000) { // in the last 60 minutes, he/she was not available, so probably he/she has a new destination
+					passenger.status = 0;
+				}
 				passenger.active = timeout;
 
 				passenger.save(function(err, updatedpassenger) {
@@ -208,6 +225,7 @@ router.route("/passengers/:id")
 			if(!err) {
 				var moving = false;
 				var dest = false;
+				var status = false;
 				//The passenger is active.
 				var timeout = new Date().getTime() + 5*60*1000; // in the next 5 minutes
 				passenger.active = timeout;
@@ -233,11 +251,22 @@ router.route("/passengers/:id")
 					passenger.address = req.body.address;
 					dest = true;
 				}
+				//The status of the passenger can change.
+				if(req.body.status !== undefined) {
+					passenger.status = req.body.status;
+					if(req.body.status == 0 || req.body.status == 3) {
+						passenger.driver = "";
+					} else if(req.body.status == 2) {
+						passenger.driver = req.body.driver;
+					}
+					status = true;
+				}
 
 				passenger.save(function(err, updatedpassenger) {
 					if(!err) {
 						if(moving) console.log("Passenger: " + req.params.id + " has a new position.");
 						if(dest) console.log("Passenger: " + req.params.id + " has a new destination.");
+						if(status) console.log("Passenger: " + req.params.id + " has a new status.");
 						response = {"error" : false, "data" : updatedpassenger};
 						res.json(response);
 					}
