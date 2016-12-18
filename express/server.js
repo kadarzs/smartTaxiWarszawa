@@ -2,11 +2,11 @@ var fs = require('fs');
 var https = require('https');
 var cors = require('cors');
 var express = require("express");
-var app = express();
+var app = express();	//nodejs server component
 var options = {
 	key: fs.readFileSync('../../server.key'),
 	cert: fs.readFileSync('../../server.crt')
-}
+}	//get certificates for ssl connection
 app.use(cors());
 var bodyParser = require("body-parser");
 var mongoOp = require("./models");
@@ -15,9 +15,9 @@ var router = express.Router();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({"extended" : false}));
 
-router.get("/",function(req,res){
+router.get("/",function(req,res) {
 	res.json({"error" : false, "data" : "404 error"});
-});
+});		//cannot get everything
 
 router.route("/drivers")
 	.get(function(req, res) {
@@ -36,9 +36,12 @@ router.route("/drivers")
 
 		mongoOp.Drivers.find({},function(err, drivers) {
 			if(!err) {
-				if(req.body.lat !== undefined && req.body.lng !== undefined) {
+				if (req.body.lat !== undefined &&
+					req.body.lng !== undefined) {
 					drivers.forEach(function(driver, i) {
-						if(Math.abs(driver.path[0].lat-req.body.lat) < 0.014 && Math.abs(driver.path[0].lng-req.body.lng) < 0.024) {
+						if( Math.abs(driver.path[0].lat-req.body.lat) < 0.014 &&
+							Math.abs(driver.path[0].lng-req.body.lng) < 0.024)
+						{
 							driversnearby.push(driver);
 						}
 					});
@@ -83,7 +86,11 @@ router.route("/drivers/:id")
 					driver.status = req.body.status;
 				}
 				//There could be new destination point added.
-				if(req.body.lat !== undefined && req.body.lng !== undefined && req.body.aimlat !== undefined && req.body.aimlng !== undefined) {
+				if (req.body.lat !== undefined &&
+					req.body.lng !== undefined &&
+					req.body.aimlat !== undefined &&
+					req.body.aimlng !== undefined)
+				{
 					var lat = parseFloat(req.body.lat.toFixed(6));
 					var lng = parseFloat(req.body.lng.toFixed(6));
 					var newpoint = {lat, lng};
@@ -111,7 +118,9 @@ router.route("/drivers/:id")
 					});
 				}
 				//The taxi can move.
-				if(req.body.movelat !== undefined && req.body.movelng !== undefined) {
+				if (req.body.movelat !== undefined &&
+					req.body.movelng !== undefined)
+				{
 					var lat = req.body.movelat;
 					var lng = req.body.movelng;
 					var newpoint = {lat, lng};
@@ -120,7 +129,8 @@ router.route("/drivers/:id")
 
 					path.forEach(function(point, i) {
 						if(i > 0) {
-							if(Math.abs(point.lat-lat) > 0.0014 || Math.abs(point.lng-lng) > 0.0024) {
+							if (Math.abs(point.lat-lat) > 0.0014 ||
+								Math.abs(point.lng-lng) > 0.0024) {
 								newpath.push(point);
 							}
 						}
@@ -130,7 +140,9 @@ router.route("/drivers/:id")
 					driver.path = newpath;
 					driver.save(function(err, updateddriver) {
 						if(!err) {
-							if((path[0].lat != lat) || (path[0].lng != lng)) console.log("Driver: " + req.params.id + " has a new position.");
+							if ((path[0].lat != lat) ||
+								(path[0].lng != lng))
+									console.log("Driver: " + req.params.id + " has a new position.");
 							response = {"error" : false, "data" : updateddriver};
 							res.json(response);
 						}
@@ -151,11 +163,15 @@ router.route("/drivers/:id")
 				var newpassengers = [];
 
 				//The destination point can be removed.
-				if(req.body.lat !== undefined && req.body.lng !== undefined) {
+				if (req.body.lat !== undefined &&
+					req.body.lng !== undefined)
+				{
 					var newpath = driver.toObject().path;
 
 					newpath.forEach(function(point, i, object) {
-						if(point.lat == req.body.lat && point.lng == req.body.lng) {
+						if (point.lat == req.body.lat &&
+							point.lng == req.body.lng)
+						{
 							wasAlready = true;
 							object.splice(i, 1);
 						}
@@ -231,7 +247,11 @@ router.route("/passengers/:id")
 				passenger.active = timeout;
 
 				//The position of the passenger can change.
-				if((req.body.lat !== undefined && req.body.lng !== undefined) && (req.body.lat !== passenger.act.lat || req.body.lng !== passenger.act.lng)) {
+				if ((req.body.lat !== undefined &&
+					 req.body.lng !== undefined) &&
+					(req.body.lat !== passenger.act.lat ||
+					 req.body.lng !== passenger.act.lng))
+				{
 					var lat = req.body.lat;
 					var lng = req.body.lng;
 					var newpoint = {lat, lng};
@@ -239,7 +259,9 @@ router.route("/passengers/:id")
 					moving = true;
 				}
 				//The destination of the passenger can change.
-				if(req.body.aimlat !== undefined && req.body.aimlng !== undefined) {
+				if (req.body.aimlat !== undefined &&
+					req.body.aimlng !== undefined)
+				{
 					var lat = req.body.aimlat;
 					var lng = req.body.aimlng;
 					var newpoint = {lat, lng};
@@ -254,7 +276,8 @@ router.route("/passengers/:id")
 				//The status of the passenger can change.
 				if(req.body.status !== undefined) {
 					passenger.status = req.body.status;
-					if(req.body.status == 0 || req.body.status == 3) {
+					if (req.body.status == 0 ||
+						req.body.status == 3) {
 						passenger.driver = "";
 					} else if(req.body.status == 2) {
 						passenger.driver = req.body.driver;
