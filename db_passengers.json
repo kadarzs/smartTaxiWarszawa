@@ -1,2 +1,2 @@
-{"_id":{"$oid":"58348e18f792d94b00aed845"},"name":"Adam","request":true,"color":"#0033DD","male":true,"act":{"lat":52.21329,"lng":21.04671},"aim":{"lat":52.21812,"lng":21.09581},"address":"Wał Miedzeszyński 724"}
-{"_id":{"$oid":"58348e7ef792d94b00aed846"},"name":"Ewa","request":false,"color":"#DD3300","male":false,"act":{"lat":52.22443,"lng":21.04328},"aim":{"lat":52.23516,"lng":21.00826},"address":"Świętokrzyska 31/33"}
+{"_id":{"$oid":"58348e18f792d94b00aed845"},"name":"Adam","active":1.482079575391e+12,"status":0,"color":"#0033DD","male":true,"act":{"lng":19.9411936,"lat":50.0521132},"aim":{"lng":21.049461364746094,"lat":52.082354345067905},"address":"Radosna 1","driver":"58376309212dd17d2482f5f9"}
+{"_id":{"$oid":"58348e7ef792d94b00aed846"},"name":"Ewa","active":0,"status":1,"color":"#DD3300","male":false,"act":{"lat":52.22543,"lng":21.04228},"aim":{"lat":52.23516,"lng":21.00826},"address":"Świętokrzyska 31/33","driver":""}
